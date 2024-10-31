@@ -1,0 +1,251 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Adivina la Palabra</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #e0f7fa; /* Color de fondo */
+            margin: 0;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        input {
+            width: 250px;
+            padding: 15px;
+            font-size: 18px;
+            margin-bottom: 10px;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            outline: none;
+        }
+        input:focus {
+            border-color: #0056b3;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .resultado {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .resultado div {
+            font-size: 24px;
+            margin: 5px 0;
+            display: flex; /* Usar flex para alinear las letras */
+        }
+        .letra {
+            display: inline-block;
+            width: 40px; /* Ancho de cada cuadrado */
+            height: 40px; /* Alto de cada cuadrado */
+            line-height: 40px; /* Centrar verticalmente el texto */
+            text-align: center;
+            border: 2px solid #007bff; /* Bordes del cuadrado */
+            border-radius: 5px;
+            margin: 0 2px; /* Espacio entre letras */
+            font-weight: bold;
+            font-size: 20px;
+        }
+        .letra-verde {
+            background-color: green;
+            color: white;
+        }
+        .letra-amarilla {
+            background-color: yellow;
+            color: black; /* Color del texto amarillo */
+        }
+        .letra-gris {
+            background-color: gray;
+            color: white; /* Color del texto gris */
+        }
+        #intentos {
+            font-size: 20px;
+            color: #333;
+        }
+        .mensaje {
+            font-size: 24px;
+            margin-top: 10px;
+            color: #333;
+        }
+        .contador {
+            font-size: 20px;
+            margin-top: 20px;
+            color: #333;
+        }
+        .teclado {
+            display: grid;
+            grid-template-columns: repeat(13, 40px); /* Crear 13 columnas para las letras */
+            gap: 5px; /* Espacio entre las letras */
+            margin-top: 20px;
+        }
+        .tecla {
+            width: 40px; /* Ancho de cada tecla */
+            height: 40px; /* Alto de cada tecla */
+            line-height: 40px; /* Centrar verticalmente el texto */
+            text-align: center;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        .tecla:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Juego de Adivina la Palabra</h1>
+<input type="text" id="entrada" maxlength="5" placeholder="Adivina la palabra">
+<button id="adivinar">Adivinar</button>
+<div id="intentos">Intentos restantes: 6</div>
+<div class="resultado" id="resultado"></div>
+<div class="contador" id="contador"></div>
+
+<div class="teclado" id="teclado"></div> <!-- Sección del teclado -->
+
+<script>
+    const palabras = ["silla", "perro", "gato", "raton", "murci", "piano", "flore", "cerca", "banco", "luz", "tigre"]; // Lista de palabras de 5 letras
+    let palabraSecreta;
+    let intentosRestantes = 6;
+    const letrasEstado = {}; // Objeto para almacenar el estado de las letras
+
+    function obtenerPalabra() {
+        const ahora = new Date();
+        const tiempoActual = ahora.getTime();
+        const tiempoUltimaPalabra = localStorage.getItem("tiempoUltimaPalabra");
+
+        // Cambiar la palabra secreta cada 24 horas (86400000 ms)
+        if (!tiempoUltimaPalabra || (tiempoActual - tiempoUltimaPalabra) > 86400000) {
+            // Cambiar la palabra secreta y guardar el tiempo actual
+            palabraSecreta = palabras[Math.floor(Math.random() * palabras.length)]; // Elegir aleatoriamente una palabra de la lista
+            localStorage.setItem("palabraSecreta", palabraSecreta);
+            localStorage.setItem("tiempoUltimaPalabra", tiempoActual);
+        } else {
+            // Recuperar la palabra secreta
+            palabraSecreta = localStorage.getItem("palabraSecreta");
+        }
+    }
+
+    function mostrarContador() {
+        const tiempoUltimaPalabra = localStorage.getItem("tiempoUltimaPalabra");
+        const ahora = new Date();
+        const tiempoActual = ahora.getTime();
+
+        const tiempoRestante = 86400000 - (tiempoActual - tiempoUltimaPalabra); // Tiempo restante en milisegundos
+        if (tiempoRestante > 0) {
+            const horas = Math.floor((tiempoRestante / (1000 * 60 * 60)) % 24);
+            const minutos = Math.floor((tiempoRestante / (1000 * 60)) % 60);
+            const segundos = Math.floor((tiempoRestante / 1000) % 60);
+            document.getElementById("contador").textContent = `Tiempo restante para la próxima palabra: ${horas}h ${minutos}m ${segundos}s`;
+        } else {
+            document.getElementById("contador").textContent = "¡La palabra ha cambiado!";
+        }
+    }
+
+    function normalizarTexto(texto) {
+        return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); // Eliminar tildes y poner en minúsculas
+    }
+
+    function crearTeclado() {
+        const teclado = document.getElementById("teclado");
+        const letras = 'abcdefghijklmnopqrstuvwxyz'; // Letras del teclado
+
+        // Crear teclas para cada letra
+        for (const letra of letras) {
+            const tecla = document.createElement("div");
+            tecla.className = "tecla";
+            tecla.textContent = letra;
+            tecla.addEventListener("click", () => {
+                // Simular la entrada del jugador al hacer clic en la tecla
+                document.getElementById("entrada").value += letra;
+            });
+            teclado.appendChild(tecla);
+            letrasEstado[letra] = "gris"; // Inicializar el estado de las letras
+        }
+    }
+
+    function actualizarTeclado() {
+        const teclado = document.getElementById("teclado");
+        teclado.childNodes.forEach(tecla => {
+            const letra = tecla.textContent;
+            tecla.className = "tecla " + letrasEstado[letra]; // Aplicar la clase de estado
+        });
+    }
+
+    obtenerPalabra();
+    mostrarContador();
+    crearTeclado();
+    setInterval(mostrarContador, 1000); // Actualizar el contador cada segundo
+
+    document.getElementById("adivinar").addEventListener("click", () => {
+        const entrada = normalizarTexto(document.getElementById("entrada").value);
+        if (intentosRestantes > 0) {
+            let resultado = `<div>`;
+            for (let i = 0; i < entrada.length; i++) {
+                if (entrada[i] === palabraSecreta[i]) {
+                    resultado += `<span class="letra letra-verde">${entrada[i]}</span>`;
+                    letrasEstado[entrada[i]] = "letra-verde"; // Marcar la letra en verde
+                } else if (palabraSecreta.includes(entrada[i])) {
+                    resultado += `<span class="letra letra-amarilla">${entrada[i]}</span>`;
+                    letrasEstado[entrada[i]] = "letra-amarilla"; // Marcar la letra en amarillo
+                } else {
+                    resultado += `<span class="letra letra-gris">${entrada[i]}</span>`;
+                    letrasEstado[entrada[i]] = "letra-gris"; // Marcar la letra en gris
+                }
+            }
+            resultado += `</div>`;
+            document.getElementById("resultado").innerHTML += resultado;
+            intentosRestantes--;
+            document.getElementById("intentos").textContent = `Intentos restantes: ${intentosRestantes}`;
+            actualizarTeclado(); // Actualizar el teclado después de cada intento
+
+            // Verifica si se adivina la palabra
+            if (entrada === palabraSecreta) {
+                const mensaje = `<div class="mensaje letra-verde">¡Felicidades! La palabra correcta es: ${palabraSecreta}</div>`;
+                document.getElementById("resultado").innerHTML += mensaje; // Mostrar la palabra correcta
+                // No reiniciar el juego, solo deshabilitar el botón
+                document.getElementById("adivinar").disabled = true;
+            } else if (intentosRestantes === 0) {
+                const mensaje = `<div class="mensaje letra-gris">Se acabaron los intentos. La palabra era: ${palabraSecreta}</div>`;
+                document.getElementById("resultado").innerHTML += mensaje;
+                // No reiniciar el juego, solo deshabilitar el botón
+                document.getElementById("adivinar").disabled = true;
+            }
+        }
+        document.getElementById("entrada").value = "";
+    });
+
+    // Añadir evento para el teclado
+    document.getElementById("entrada").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            document.getElementById("adivinar").click(); // Simular clic en el botón "Adivinar"
+        }
+    });
+</script>
+
+</body>
+</html>
